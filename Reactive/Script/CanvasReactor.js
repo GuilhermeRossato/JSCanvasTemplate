@@ -70,8 +70,9 @@ const FULL_CLEAR_ON_DRAW = true;
 function CanvasReactor(arg1, width, height, ctxMenu) {
 	const self = this;
 	let canvas = undefined;
-	function createCanvas() {
+	function createCanvas(object) {
 		assignCanvas(document.createElement('canvas'));
+		object.appendChild(self.canvas);
 	}
 	function assignCanvas(object) {
 		Object.defineProperty(self, "canvas", {
@@ -85,7 +86,7 @@ function CanvasReactor(arg1, width, height, ctxMenu) {
 		}
 		);
 	}
-	if (arg1 instanceof String) {
+	if (typeof arg1 === String) {
 		let object = document.getElementById(arg1);
 		if (object instanceof HTMLDivElement) {
 			createCanvas(object);

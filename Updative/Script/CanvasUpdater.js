@@ -71,8 +71,9 @@ const FULL_CLEAR_ON_DRAW = true;
 function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 	const self = this;
 	let canvas = undefined;
-	function createCanvas() {
+	function createCanvas(object) {
 		assignCanvas(document.createElement('canvas'));
+		object.appendChild(self.canvas);
 	}
 	function assignCanvas(object) {
 		Object.defineProperty(self, "canvas", {
@@ -86,7 +87,7 @@ function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 		}
 		);
 	}
-	if (arg1 instanceof String) {
+	if (typeof arg1 === "string") {
 		let object = document.getElementById(arg1);
 		if (object instanceof HTMLDivElement) {
 			createCanvas(object);
@@ -170,7 +171,7 @@ function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 	if (typeof (Timestamper) !== 'undefined') {
 		this.timestamper = new Timestamper(delay,function(delta) {
 			if ((!(self.events["update"]instanceof Array)) || (self.events["update"].every(obj=>obj.call(self, delta)))) {
-				if ((!this.update instanceof Function) || this.update()) {
+				if (!(this.update instanceof Function) || this.update()) {
 					self.objects.forEach(obj=>{
 						if (obj instanceof Object && obj.update instanceof Function)
 							obj.update.call(obj, delta * self.multiplier);
@@ -417,10 +418,11 @@ CanvasUpdater.prototype = {
 				console.warn("Warning: Listener was ignored due to unknown argument passed.");
 		},
 		getMousePosition: function(ev, extra) {
+			var self = this;
 			function vectorRelativeCanvasPosition(pageX, pageY) {
 				return {
-					x: pageX - this.canvas.offsetLeft + window.scrollX,
-					y: pageY - this.canvas.offsetTop + window.scrollY
+					x: pageX - self.canvas.offsetLeft + window.scrollX,
+					y: pageY - self.canvas.offsetTop + window.scrollY
 				}
 			}
 			if (ev instanceof MouseEvent)
