@@ -105,7 +105,8 @@ function CanvasReactor(arg1, width, height, ctxMenu) {
 	let local = {};
 	["width", "height"].forEach((property,i)=>{
 		let parameter = (i === 0 ? width : height);
-		local[property] = ((typeof parameter != "number") || isNaN(parameter)) ? parameter : (i === 0 ? 960 : 480);
+		local[property] = ((typeof parameter != "number") || isNaN(parameter)) ?(i === 0 ? 960 : 480): parameter;
+		self.canvas[property] = parameter; 
 		Object.defineProperty(self, property, {
 			configurable: false,
 			enumerable: false,
