@@ -105,7 +105,7 @@ function CanvasReactor(arg1, width, height, ctxMenu) {
 	let local = {};
 	["width", "height"].forEach((property,i)=>{
 		let parameter = (i === 0 ? width : height);
-		local[property] = ((typeof parameter != "number") || isNaN(parameter)) ?(i === 0 ? 960 : 480): parameter;
+		local[property] = ((typeof parameter === "number") && (!isNaN(parameter))) ? parameter : (i === 0 ? 480 : 360);
 		self.canvas[property] = parameter; 
 		Object.defineProperty(self, property, {
 			configurable: false,
@@ -220,14 +220,14 @@ CanvasReactor.prototype = {
 			}
 			this.objects.forEach(obj=>{
 				if (obj instanceof Object && obj.onMouseDown instanceof Function && obj.alive !== false)
-					if (obj.onMouseDown.call(obj, btnCode, m.x, m.y))
+					if (obj.onMouseDown.call(obj, m.x, m.y, btnCode))
 						redraw = true;
 			}
 			);
-			if (redraw)
-				self.draw();
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onMouseUp: function(ev) {
 		if (this.inProcess) {
@@ -259,10 +259,10 @@ CanvasReactor.prototype = {
 						redraw = true;
 			}
 			);
-			if (redraw)
-				self.draw();
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onMouseMove: function(ev) {
 		if (this.inProcess) {
@@ -283,11 +283,11 @@ CanvasReactor.prototype = {
 						nextCursor = obj.cursor;
 				}
 			});
-			if (redraw)
-				this.draw();
 			this.mouse.cursor = nextCursor;
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onKeyUp: function(ev) {
 		if (this.inProcess) {
@@ -302,10 +302,10 @@ CanvasReactor.prototype = {
 				if (obj instanceof Object && obj.onKeyUp instanceof Function && obj.alive !== false && obj.onKeyUp.call(obj, ev.keyCode, ev.ctrlKey, ev.shiftKey, ev.altKey, ev))
 					redraw = true;
 			});
-			if (redraw)
-				this.draw();
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onKeyDown: function(ev) {
 		// This function must return true if key should be processed by browser, false if it should be ignored (a handled tab/space character would be false)

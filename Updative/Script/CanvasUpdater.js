@@ -108,7 +108,8 @@ function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 	let local = {};
 	["width", "height"].forEach((property,i)=>{
 		let parameter = (i === 0 ? width : height);
-		local[property] = ((typeof parameter != "number") || isNaN(parameter)) ? parameter : (i === 0 ? 960 : 480);
+		local[property] = ((typeof parameter === "number") && (!isNaN(parameter))) ? parameter : (i === 0 ? 480 : 360);
+		self.canvas[property] = local[property];
 		Object.defineProperty(self, property, {
 			configurable: false,
 			enumerable: false,
@@ -195,10 +196,10 @@ CanvasUpdater.prototype = {
 		}
 		this.inProcess = true;
 		var ctx = this.ctx;
-		if ((!(this.events["draw"]instanceof Array)) || (this.events["draw"].every(obj=>obj.call(this, ctx)))) {
+		if (FULL_CLEAR_ON_DRAW)
+				ctx.clearRect(-1, -1, this.width+2, this.height+2);
+		if ((!(this.events["draw"] instanceof Array)) || (this.events["draw"].every(obj=>obj.call(this, ctx)))) {
 			// Since all 'draw' hooks have returned true, the drawing will occur:
-			if (FULL_CLEAR_ON_DRAW)
-				ctx.clearRect(-1, -1, this.width, this.height);
 			this.objects.forEach(function(obj) {
 				if (obj instanceof Object) {
 					if ((!FULL_CLEAR_ON_DRAW) && obj.clear instanceof Function)
@@ -240,10 +241,10 @@ CanvasUpdater.prototype = {
 						redraw = true;
 			}
 			);
-			if (redraw)
-				self.draw();
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onMouseUp: function(ev) {
 		if (this.inProcess) {
@@ -275,10 +276,10 @@ CanvasUpdater.prototype = {
 						redraw = true;
 			}
 			);
-			if (redraw)
-				self.draw();
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onMouseMove: function(ev) {
 		if (this.inProcess) {
@@ -299,11 +300,11 @@ CanvasUpdater.prototype = {
 						nextCursor = obj.cursor;
 				}
 			});
-			if (redraw)
-				this.draw();
 			this.mouse.cursor = nextCursor;
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onKeyUp: function(ev) {
 		if (this.inProcess) {
@@ -318,10 +319,10 @@ CanvasUpdater.prototype = {
 				if (obj instanceof Object && obj.onKeyUp instanceof Function && obj.alive !== false && obj.onKeyUp.call(obj, ev.keyCode, ev.ctrlKey, ev.shiftKey, ev.altKey, ev))
 					redraw = true;
 			});
-			if (redraw)
-				this.draw();
 		}
 		this.inProcess = false;
+		if (redraw)
+			self.draw();
 	},
 	onKeyDown: function(ev) {
 		if (this.inProcess) {
