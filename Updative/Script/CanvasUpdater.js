@@ -37,7 +37,7 @@
  *  .removeObject(object) ---> Removes one object from the list of objects
  *
  * 	.addEventListener(type, listener)	---> Add a hook to be run before a specific function call
- * 		type		(string)			Candidates: "draw", "update", "mousemove", "mousedown", "mouseup", "mouseclick", "keydown", "keyup".
+ * 		type		(string)			Candidates: "draw", "update", "mousemove", "mousedown", "mouseup", "mouseclick", "keydown", "keyup", "resize", "wheelup", "wheeldown".
  * 		listener	(function)			function to call when the specific event happens
  *
  *			The process of hooking an event allow you to block events that a portion of your software already processed
@@ -63,7 +63,7 @@
  *		.objects;		Array with objects to handle, send draw calls, etc
  *
  * Each object added to this class can optionally contain the following methods/functions:
- *	draw(ctx), onMouseMove(x, y), onMouseDown(x, y, buttonId), onMouseUp(x, y, buttonId)
+ *	draw(ctx), onMouseMove(x, y), onMouseDown(x, y, buttonId), onMouseUp(x, y, buttonId), onKeyDown(keyCode, ctrlDown, shiftDown, ev.altDown), onWheelDown(deltaY), onWheelUp(deltaY), onCanvasResize(property, oldValue, newValue)
  * And the following properties:
  *	alive [bool], cursor [string], box [GuiBox]
  */
@@ -117,8 +117,10 @@ function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 			set: ((value)=>{
 				if (typeof value != "number" || isNaN(value) || value <= 0)
 					console.warn("Warning: Ignored invalid input for canvas " + property + ".");
-				else
+				else if (self.beforeResize(property, local[property], value)) {
 					local[property] = self.canvas[property] = value;
+					self.afterResize();
+				}
 			}
 			)
 		});
@@ -165,21 +167,14 @@ function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 		document.onkeydown = (ev=>CanvasUpdater.prototype.onKeyDown.call(self, ev));
 		document.onkeyup = (ev=>CanvasUpdater.prototype.onKeyUp.call(self, ev));
 		document.addEventListener("keyup", ev=>CanvasUpdater.prototype.onKeyUp.call(self, ev), false);
+		document.addEventListener('wheel', (ev)=> ((ev.deltaY < 0) ? self.onWheelUp : self.onWheelDown).call(this, ev.deltaY), {passive: true});
 	} else {
 		console.warn("Warning: No events were attributed to this class");
 	}
 	// Prevent function callback loop
 	if (typeof (Timestamper) !== 'undefined') {
-		this.timestamper = new Timestamper(delay,function(delta) {
-			if ((!(self.events["update"]instanceof Array)) || (self.events["update"].every(obj=>obj.call(self, delta)))) {
-				if (!(this.update instanceof Function) || this.update()) {
-					self.objects.forEach(obj=>{
-						if (obj instanceof Object && obj.update instanceof Function)
-							obj.update.call(obj, delta * self.multiplier);
-					});
-					self.draw();
-				}
-			}
+		this.timestamper = new Timestamper(delay,function(cycles) {
+			self.update(cycles);
 		}
 		);
 	}
@@ -188,7 +183,18 @@ function CanvasUpdater(arg1, delay, width, height, ctxMenu) {
 }
 CanvasUpdater.prototype = {
 	constructor: CanvasUpdater,
-	eventCandidates: ["draw", "update", "mousemove", "mousedown", "mouseup", "mouseclick", "keydown", "keyup"],
+	eventCandidates: ["draw", "update", "mousemove", "mousedown", "mouseup", "mouseclick", "keydown", "keyup", "resize", "wheelup", "wheeldown"],
+	update: function(cycles) {
+		var self = this;
+		if ((!(self.events["update"]instanceof Array)) || (self.events["update"].every(obj=>obj.call(self, cycles)))) {
+			self.objects.forEach(obj=>{
+				if (obj instanceof Object && obj.update instanceof Function && obj.alive !== false)
+					obj.update.call(obj, cycles);
+			}
+			);
+			self.draw();
+		}
+	},
 	draw: function() {
 		if (this.inProcess) {
 			console.warn("Warning: callback loop prevented");
@@ -197,8 +203,8 @@ CanvasUpdater.prototype = {
 		this.inProcess = true;
 		var ctx = this.ctx;
 		if (FULL_CLEAR_ON_DRAW)
-				ctx.clearRect(-1, -1, this.width+2, this.height+2);
-		if ((!(this.events["draw"] instanceof Array)) || (this.events["draw"].every(obj=>obj.call(this, ctx)))) {
+			ctx.clearRect(-1, -1, this.width + 2, this.height + 2);
+		if ((!(this.events["draw"]instanceof Array)) || (this.events["draw"].every(obj=>obj.call(this, ctx)))) {
 			// Since all 'draw' hooks have returned true, the drawing will occur:
 			this.objects.forEach(function(obj) {
 				if (obj instanceof Object) {
@@ -210,6 +216,27 @@ CanvasUpdater.prototype = {
 			});
 		}
 		this.inProcess = false;
+	},
+	beforeResize: function(property, lastValue, newValue) {
+		if (this.inProcess) {
+			console.warn("Warning: callback loop prevented");
+			return false;
+		}
+		this.inProcess = true;
+		if ((!(this.events["resize"]instanceof Array)) || (this.events["resize"].every(obj=>obj.call(this, property, lastValue, newValue)))) {
+			this.inProcess = false;
+			return true;
+		} else {
+			this.inProcess = false;
+			return false;
+		}
+	},
+	afterResize: function() {
+		this.objects.forEach(obj=>{
+			if (obj instanceof Object && obj.onCanvasResize instanceof Function && obj.alive !== false)
+				obj.onCanvasResize.call(obj)
+		}
+		);
 	},
 	onMouseDown: function(ev) {
 		if (this.inProcess) {
@@ -305,6 +332,22 @@ CanvasUpdater.prototype = {
 		this.inProcess = false;
 		if (redraw)
 			self.draw();
+	},
+	onWheelUp: function(deltaY) {
+		if ((!(this.events["wheelup"]instanceof Array)) || (this.events["wheelup"].every(obj=>obj.call(this, deltaY)))) {
+			this.objects.forEach(function(obj) {
+				if (obj instanceof Object && obj.onWheelUp instanceof Function && obj.alive !== false)
+					obj.onWheelUp(deltaY);
+			});
+		}
+	},
+	onWheelDown: function(deltaY) {
+		if ((!(this.events["wheeldown"]instanceof Array)) || (this.events["wheeldown"].every(obj=>obj.call(this, deltaY)))) {
+			this.objects.forEach(function(obj) {
+				if (obj instanceof Object && obj.onWheelDown instanceof Function && obj.alive !== false)
+					obj.onWheelDown(deltaY);
+			});
+		}
 	},
 	onKeyUp: function(ev) {
 		if (this.inProcess) {
