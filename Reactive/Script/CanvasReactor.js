@@ -318,7 +318,7 @@ CanvasReactor.prototype = {
 		  , keyWasProcessed = false;
 		if ((!(this.events["keydown"]instanceof Array)) || (this.events["keydown"].every(func=>func.call(self, ev.keyCode, ev.ctrlKey, ev.shiftKey, ev.altKey, ev)))) {
 			this.objects.forEach(function(obj) {
-				if (obj instanceof Object && obj.onKeyUp instanceof Function && obj.alive !== false && obj.onKeyUp.call(obj, ev.keyCode, ev.ctrlKey, ev.shiftKey, ev.altKey, ev))
+				if (obj instanceof Object && obj.onKeyDown instanceof Function && obj.alive !== false && obj.onKeyDown.call(obj, ev.keyCode, ev.ctrlKey, ev.shiftKey, ev.altKey, ev))
 					redraw = true;
 			});
 			if (redraw) {
